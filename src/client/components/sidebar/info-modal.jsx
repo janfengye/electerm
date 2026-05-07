@@ -16,6 +16,7 @@ import Link from '../common/external-link'
 import LogoElem from '../common/logo-elem'
 import RunningTime from './app-running-time'
 import { auto } from 'manate/react'
+import { useState } from 'react'
 
 import {
   packInfo,
@@ -27,8 +28,13 @@ import './info.styl'
 const e = window.translate
 
 export default auto(function InfoModal (props) {
+  const [runtimeEnv, setRuntimeEnv] = useState(null)
+
   const handleChangeTab = key => {
     window.store.infoModalTab = key
+    if (key === infoTabs.env && !runtimeEnv) {
+      window.pre.runGlobalAsync('getEnv').then(env => setRuntimeEnv(env))
+    }
   }
 
   const renderCheckUpdate = () => {
@@ -42,8 +48,10 @@ export default auto(function InfoModal (props) {
       upgradeInfo
     } = props
     const onCheckUpdating = upgradeInfo.checkingRemoteVersion || upgradeInfo.upgrading
+    const { noUpdateMessage, noUpdateMessageExpires } = upgradeInfo
+    const showMessage = noUpdateMessage && noUpdateMessageExpires && Date.now() < noUpdateMessageExpires
     return (
-      <p className='mg1b mg2t'>
+      <div className='mg1b mg2t'>
         <Button
           type='primary'
           loading={onCheckUpdating}
@@ -51,7 +59,10 @@ export default auto(function InfoModal (props) {
         >
           {e('checkForUpdate')}
         </Button>
-      </p>
+        {showMessage && (
+          <span className='mg1l update-msg'>{noUpdateMessage}</span>
+        )}
+      </div>
     )
   }
 
@@ -130,14 +141,14 @@ export default auto(function InfoModal (props) {
     knownIssuesLink
   } = packInfo
   const link = releaseLink.replace('/releases', '')
-  const { env, versions } = window.pre
+  const { versions } = window.pre
   const deps = {
     ...devDependencies,
     ...dependencies
   }
   const envs = {
     ...versions,
-    ...env
+    ...(runtimeEnv || {})
   }
   const title = (
     <div className='custom-modal-close-confirm-title font16'>

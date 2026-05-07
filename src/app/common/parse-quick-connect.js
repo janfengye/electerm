@@ -22,6 +22,12 @@
 const SUPPORTED_PROTOCOLS = ['ssh', 'telnet', 'vnc', 'rdp', 'spice', 'serial', 'ftp', 'http', 'https', 'electerm']
 
 /**
+ * Deny list for opts keys - these are parsed from the URL itself
+ * and should not be overridable via the opts JSON parameter for safety
+ */
+const OPTS_DENY_LIST = ['type', 'host']
+
+/**
  * Default ports for each protocol
  */
 const DEFAULT_PORTS = {
@@ -370,7 +376,12 @@ function parseQuickConnect (str) {
         opts.port = parseInt(port, 10)
       }
       if (username !== undefined && username !== '') {
-        opts.username = username
+        // FTP form uses 'user' instead of 'username'
+        if (finalProtocol === 'ftp') {
+          opts.user = username
+        } else {
+          opts.username = username
+        }
       }
       if (password !== undefined && password !== '') {
         opts.password = password
@@ -388,6 +399,7 @@ function parseQuickConnect (str) {
     if (optsStr) {
       try {
         const extraOpts = JSON.parse(optsStr)
+        OPTS_DENY_LIST.forEach(key => delete extraOpts[key])
         Object.assign(opts, extraOpts)
       } catch (err) {
         console.error('Failed to parse opts:', err)
@@ -434,5 +446,6 @@ module.exports = {
   getDefaultPort,
   getSupportedProtocols,
   SUPPORTED_PROTOCOLS,
-  DEFAULT_PORTS
+  DEFAULT_PORTS,
+  OPTS_DENY_LIST
 }

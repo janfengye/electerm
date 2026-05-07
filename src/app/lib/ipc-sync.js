@@ -104,7 +104,6 @@ module.exports = {
     return {
       sep: require('path').sep,
       ...constants,
-      env: JSON.stringify(process.env),
       versions: JSON.stringify(process.versions),
       transferKeys,
       fsFunctions: [
@@ -128,11 +127,15 @@ module.exports = {
         'openFile',
         'zipFolder',
         'unzipFile',
+        'readCustom',
         'exists',
         'readdir',
         'mkdir',
         'realpath',
         'statCustom',
+        'openCustom',
+        'closeCustom',
+        'writeCustom',
         'getFolderSize'
       ]
     }

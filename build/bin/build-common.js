@@ -115,3 +115,134 @@ exports.renameDist = function renameDist () {
   }
   mv('dist', 'dist' + new Date().getTime())
 }
+
+exports.uploadToR2 = async function uploadToR2 (src) {
+  // Must be running in CI
+  if (!process.env.CI) {
+    console.log('[r2] Skipping upload: not in CI environment')
+    return
+  }
+
+  // Check commit message contains "[r2]"
+  const { execSync } = require('child_process')
+  let commitMsg = ''
+  try {
+    commitMsg = execSync('git log -1 --format=%s', { encoding: 'utf8' }).trim()
+  } catch (e) {
+    console.log('[r2] Skipping upload: could not read commit message')
+    return
+  }
+  if (!commitMsg.includes('[r2]')) {
+    console.log('[r2] Skipping upload: commit message does not contain "[r2]"')
+    return
+  }
+
+  // Check required env vars
+  const accountId = process.env.CF_R2_ACCOUNT_ID
+  const bucket = process.env.CF_R2_BUCKET
+  const accessKeyId = process.env.CF_R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.CF_R2_SECRET_ACCESS_KEY
+
+  if (!accountId || !bucket || !accessKeyId || !secretAccessKey) {
+    console.error('[r2] Missing required env vars: CF_R2_ACCOUNT_ID, CF_R2_BUCKET, CF_R2_ACCESS_KEY_ID, CF_R2_SECRET_ACCESS_KEY')
+    return
+  }
+
+  // Find the built file in dist/
+  const fs = require('fs')
+  const path = require('path')
+  const distDir = resolve(__dirname, '../../dist')
+  let filePath = null
+  if (fs.existsSync(distDir)) {
+    const files = fs.readdirSync(distDir)
+    const match = files.find(f => f.endsWith(src))
+    if (match) {
+      filePath = path.join(distDir, match)
+    }
+  }
+  if (!filePath) {
+    // Try to find recursively one level deeper
+    if (fs.existsSync(distDir)) {
+      const entries = fs.readdirSync(distDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const subDir = path.join(distDir, entry.name)
+          const subFiles = fs.readdirSync(subDir)
+          const match = subFiles.find(f => f.endsWith(src))
+          if (match) {
+            filePath = path.join(subDir, match)
+            break
+          }
+        }
+      }
+    }
+  }
+  if (!filePath) {
+    console.error(`[r2] Could not find built file matching "${src}" in dist/`)
+    return
+  }
+
+  console.log(`[r2] Uploading ${filePath} to R2 bucket "${bucket}" as "${path.basename(filePath)}"`)
+
+  let S3Client, PutObjectCommand
+  try {
+    const s3Module = require('@aws-sdk/client-s3')
+    S3Client = s3Module.S3Client
+    PutObjectCommand = s3Module.PutObjectCommand
+  } catch (e) {
+    console.error('[r2] @aws-sdk/client-s3 is not installed. Run: npm install --save-dev @aws-sdk/client-s3')
+    throw e
+  }
+
+  const client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId,
+      secretAccessKey
+    }
+  })
+
+  const fileStream = fs.createReadStream(filePath)
+  const key = path.basename(filePath)
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: fileStream,
+    ContentLength: fs.statSync(filePath).size
+  })
+
+  await client.send(command)
+  console.log(`[r2] Successfully uploaded ${key} to R2`)
+}
+
+/**
+ * Patch the electron-builder NSIS template so that the installer always tries
+ * to keep shortcuts (desktop / start-menu / taskbar pins) when upgrading.
+ *
+ * By default, when `allowToChangeInstallationDirectory` is set, the template
+ * sets `isTryToKeepShortcuts = "false"` for manual (non-auto-update) installs,
+ * which causes `WinShell::UninstShortcut` / `UninstAppUserModelId` to be called
+ * and the taskbar pin to be silently removed. Removing the guard makes the
+ * installer always pass `--keep-shortcuts` to the old uninstaller when the
+ * previous install wrote `KeepShortcuts = "true"` to the registry.
+ */
+exports.patchNsisKeepShortcuts = function patchNsisKeepShortcuts () {
+  const fs = require('fs')
+  const path = require('path')
+  const templatePath = path.join(
+    require.resolve('app-builder-lib/package.json'),
+    '../templates/nsis/include/installUtil.nsh'
+  )
+  const original = fs.readFileSync(templatePath, 'utf-8')
+  const patched = original.replace(
+    /(!macro setIsTryToKeepShortcuts\s+StrCpy \$isTryToKeepShortcuts "true"\s*)!ifdef allowToChangeInstallationDirectory[\s\S]*?!endif(\s*!macroend)/,
+    '$1$2'
+  )
+  if (patched === original) {
+    console.log('NSIS keep-shortcuts patch: already applied or pattern not found, skipping')
+  } else {
+    fs.writeFileSync(templatePath, patched, 'utf-8')
+    console.log('NSIS keep-shortcuts patch: applied successfully')
+  }
+}

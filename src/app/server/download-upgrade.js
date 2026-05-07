@@ -17,15 +17,16 @@ const globalState = require('./global-state')
 rp.defaults.proxy = false
 
 function getUrl (url, mirror) {
-  if (mirror === 'download-electerm') {
-    // return `https://sciproxy.com/${url}`
-    return url
-  } else if (mirror === 'github') {
-    return url
-  } else {
+  if (mirror === 'gh-proxy') {
+    return `https://electerm-mirror.html5beta.com/${url}`
+  } if (mirror === 'sourceforge') {
     const arr = url.split('/')
     const len = arr.length
     return `https://master.dl.sourceforge.net/project/electerm.mirror/${arr[len - 2]}/${arr[len - 1]}?viasf=1`
+  } else if (mirror === 'r2') {
+    return `https://electerm-store.html5beta.com/r/${url.split('/').pop()}`
+  } else {
+    return url
   }
 }
 
@@ -63,7 +64,7 @@ class Upgrade {
     const agent = createProxyAgent(proxy)
     const releaseInfoUrl = `${packInfo.homepage}/data/electerm-github-release.json?_=${+new Date()}`
     const filter = r => {
-      return r.name.includes(installSrc)
+      return r.name.endsWith(installSrc)
     }
     // if (isWin) {
     //   filter = r => /electerm-\d+\.\d+\.\d+-win-x64\.tar\.gz/.test(r.name)

@@ -314,8 +314,11 @@ if (type === 'rdp') {
 
       if (action === 'transfer-new') {
         const { sftpId, id, isFtp } = msg
+        const session = sftp(sftpId)
         const opts = Object.assign({}, msg, {
-          sftp: sftp(sftpId).sftp,
+          sftp: session.sftp,
+          conn: session.client,
+          ftpSession: isFtp ? session : null,
           sftpId,
           ws
         })

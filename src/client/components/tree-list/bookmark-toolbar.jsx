@@ -10,12 +10,9 @@ import {
 import { Button, Space, Dropdown } from 'antd'
 import copy from 'json-deep-copy'
 import time from '../../common/time'
-import { uniq } from 'lodash-es'
-import { fixBookmarks } from '../../common/db-fix'
 import download from '../../common/download'
-import delay from '../../common/wait'
-import { action } from 'manate'
 import Upload from '../common/upload'
+import { beforeBookmarkUpload } from './bookmark-upload'
 
 const e = window.translate
 
@@ -28,71 +25,12 @@ export default function BookmarkToolbar (props) {
     bookmarkGroups,
     bookmarks
   } = props
-  const upload = action(async (file) => {
-    const { store } = window
-    const filePath = file.filePath
-    const txt = await window.fs.readFile(filePath)
-
-    const content = JSON.parse(txt)
-    const {
-      bookmarkGroups: bookmarkGroups1,
-      bookmarks: bookmarks1
-    } = content
-    const bookmarkGroups0 = copy(bookmarkGroups)
-    const bookmarks0 = copy(bookmarks)
-
-    // Using Map instead of reduce
-    const bmTree = new Map(
-      bookmarks0.map(bookmark => [bookmark.id, bookmark])
-    )
-    const bmgTree = new Map(
-      bookmarkGroups0.map(group => [group.id, group])
-    )
-
-    const fixed = fixBookmarks(bookmarks1)
-
-    fixed.forEach(bg => {
-      if (!bmTree.has(bg.id)) {
-        store.bookmarks.push(bg)
-      }
-    })
-
-    bookmarkGroups1.forEach(bg => {
-      if (!bmgTree.has(bg.id)) {
-        store.bookmarkGroups.push(bg)
-      } else {
-        const bg1 = store.bookmarkGroups.find(
-          b => b.id === bg.id
-        )
-        bg1.bookmarkIds = uniq(
-          [
-            ...bg1.bookmarkIds,
-            ...bg.bookmarkIds
-          ]
-        )
-      }
-    })
-    return false
-  })
-  const beforeUpload = async (file) => {
-    const names = [
-      'bookmarks',
-      'bookmarkGroups'
-    ]
-    for (const name of names) {
-      window[`watch${name}`].stop()
-    }
-    upload(file)
-    await delay(1000)
-    for (const name of names) {
-      window[`watch${name}`].start()
-    }
-  }
+  const beforeUpload = beforeBookmarkUpload
 
   const handleDownload = () => {
     const txt = JSON.stringify({
-      bookmarkGroups: copy(bookmarkGroups),
-      bookmarks: copy(bookmarks)
+      bookmarkGroups: copy(bookmarkGroups || []),
+      bookmarks: copy(bookmarks || [])
     }, null, 2)
     const stamp = time(undefined, 'YYYY-MM-DD-HH-mm-ss')
     download('bookmarks-' + stamp + '.json', txt)

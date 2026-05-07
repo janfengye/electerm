@@ -1,15 +1,29 @@
 const fss = require('fs/promises')
+const fs = require('fs')
 const log = require('../common/log')
 const path = require('path')
 const { isWin, isMac, tempDir } = require('../common/runtime-constants')
 const uid = require('../common/uid')
 const { promisify } = require('util')
-const execAsync = promisify(
-  require('child_process').exec
-)
+const { exec, spawn } = require('child_process')
+const execAsync = promisify(exec)
 const { getSizeCount, getSizeCountWin } = require('../common/get-folder-size-and-file-count.js')
 
 const ROOT_PATH = '/'
+
+function encodeUtf8Base64 (value) {
+  return Buffer.from(String(value), 'utf8').toString('base64')
+}
+
+// Encoding function
+function encodeUint8Array (uint8Arr) {
+  return Buffer.from(uint8Arr).toString('base64')
+}
+
+// Decoding function
+function decodeBase64String (base64String) {
+  return new Uint8Array(Buffer.from(base64String, 'base64'))
+}
 
 const isWinDrive = function (path) {
   return /^\w+:$/.test(path)
@@ -36,6 +50,47 @@ const run = (cmd) => {
  */
 const runWinCmd = (cmd) => {
   return execAsync(`powershell.exe -Command "${cmd}"`)
+}
+
+function spawnDetachedCommand (command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      detached: false,
+      stdio: ['ignore', 'ignore', 'pipe'],
+      ...options
+    })
+    let stderr = ''
+
+    child.stderr.on('data', data => {
+      stderr += data.toString()
+    })
+    child.on('error', reject)
+
+    let settled = false
+    const settle = (err) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      clearTimeout(timer)
+      child.unref()
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    }
+
+    child.on('close', code => {
+      if (code !== 0) {
+        settle(new Error(stderr.trim() || `Command exited with code ${code}`))
+      } else {
+        settle(null)
+      }
+    })
+
+    const timer = setTimeout(() => settle(null), 5000)
+  })
 }
 
 function getFolderSizeWin (folderPath) {
@@ -98,16 +153,22 @@ const touch = (localFilePath) => {
  * @param {string} localFolderPath absolute path
  */
 const openFile = (localFilePath) => {
-  let cmd
   if (isWin) {
-    cmd = `Invoke-Item '${localFilePath}'`
-    return runWinCmd(cmd)
+    const script = '$path = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:ELECTERM_OPEN_FILE_PATH_B64)); Invoke-Item -LiteralPath $path'
+    return spawnDetachedCommand('powershell.exe', [
+      '-NoLogo',
+      '-NonInteractive',
+      '-Command',
+      script
+    ], {
+      windowsHide: true,
+      env: {
+        ...process.env,
+        ELECTERM_OPEN_FILE_PATH_B64: encodeUtf8Base64(localFilePath)
+      }
+    })
   }
-  cmd = (isMac
-    ? 'open'
-    : 'xdg-open') +
-    ` "${localFilePath}"`
-  return run(cmd)
+  return spawnDetachedCommand(isMac ? 'open' : 'xdg-open', [localFilePath])
 }
 
 /**
@@ -186,6 +247,51 @@ async function listWindowsRootPath () {
   })
 }
 
+const readCustom = (p1, len, ...args) => {
+  return new Promise((resolve, reject) => {
+    fs.read(p1, new Uint8Array(len), ...args, (err, n, buffer) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve({ n, newArr: encodeUint8Array(buffer) })
+    })
+  })
+}
+
+const writeCustom = (p1, arr) => {
+  return new Promise((resolve, reject) => {
+    const narr = decodeBase64String(arr)
+    fs.write(p1, narr, (err, n) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve(1)
+    })
+  })
+}
+
+const openCustom = async (...args) => {
+  return new Promise((resolve, reject) => {
+    fs.open(...args, (err, n) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve(n)
+    })
+  })
+}
+
+const closeCustom = async (...args) => {
+  return new Promise((resolve, reject) => {
+    fs.close(...args, (err) => {
+      if (err) {
+        return reject(err)
+      }
+      return resolve(true)
+    })
+  })
+}
+
 const statCustom = async (...args) => {
   const st = await fss.stat(...args)
   st.isD = st.isDirectory()
@@ -207,6 +313,10 @@ const fsExport = Object.assign(
     openFile,
     zipFolder,
     unzipFile,
+    readCustom,
+    writeCustom,
+    openCustom,
+    closeCustom,
     statCustom
   },
   {

@@ -71,9 +71,6 @@ export default class TransportAction extends Component {
     this.transport = null
     this.fromFile = null
     refsTransfers.remove(this.id)
-    if (this.isFtp) {
-      window.initingFtpTabIds?.delete(this.tabId)
-    }
   }
 
   localCheckExist = (path) => {
@@ -158,7 +155,7 @@ export default class TransportAction extends Component {
     const finishTime = Date.now()
     if (!config.disableTransferHistory) {
       const fromFile = transfer.fromFile || this.fromFile
-      const size = update.size || fromFile.size
+      const size = update.size ?? update.transferred ?? fromFile.size
       const r = copy(transfer)
       assign(r, {
         finishTime,
@@ -185,20 +182,27 @@ export default class TransportAction extends Component {
       return
     }
     const { transfer } = this.props
+    const fromFile = transfer.fromFile || this.fromFile || {}
+    const transferredValue = typeof transferred === 'object' && transferred !== null
+      ? transferred.transferred
+      : transferred
+    const total = typeof transferred === 'object' && transferred !== null
+      ? (transferred.total || fromFile.size || 0)
+      : (fromFile.size || 0)
     const up = {}
-    const total = transfer.fromFile.size
     let percent = total === 0
       ? 100
-      : Math.floor(100 * transferred / total)
+      : Math.floor(100 * transferredValue / total)
     percent = percent >= 100 ? 100 : percent
+    this.total = total
     up.percent = percent
     up.status = 'active'
-    up.transferred = transferred
+    up.transferred = transferredValue
     up.startTime = this.startTime
-    up.speed = format(transferred, up.startTime)
+    up.speed = format(transferredValue, up.startTime)
     assign(
       up,
-      computeLeftTime(transferred, total, up.startTime)
+      computeLeftTime(transferredValue, total, up.startTime)
     )
     up.passedTime = computePassedTime(up.startTime)
     this.update(up)
@@ -241,10 +245,11 @@ export default class TransportAction extends Component {
       operation // 'mv' or 'cp'
     } = transfer
 
-    let finalToPath = toPath
+    // Use this.newPath when set (e.g. user chose rename from conflict modal)
+    let finalToPath = this.newPath || toPath
 
-    // Check if it's a copy operation to the same path
-    if (fromPath === toPath && operation === fileOperationsMap.cp) {
+    // Check if it's a copy operation to the same path (no rename decision pending)
+    if (!this.newPath && fromPath === toPath && operation === fileOperationsMap.cp) {
       finalToPath = this.handleRename(toPath, typeFrom === typeMap.remote).newPath
       transfer.toPath = finalToPath
       this.update({
@@ -292,6 +297,7 @@ export default class TransportAction extends Component {
     this.transport = await sftp[transferType]({
       remotePath,
       localPath,
+      isDirectory: !!fromFile.isDirectory,
       options: { mode },
       onData: this.onData,
       onError: this.onError,
@@ -410,6 +416,10 @@ export default class TransportAction extends Component {
       this.newName = newName
     }
 
+    const { typeFrom, typeTo } = this.props.transfer
+    if (typeFrom === typeTo) {
+      return this.mvOrCp()
+    }
     this.startTransfer()
   }
 
@@ -526,6 +536,9 @@ export default class TransportAction extends Component {
     }
     if (zip) {
       return this.zipTransferFolder()
+    }
+    if (!this.isFtp) {
+      return this.transferFile()
     } else {
       await this.transferFolderRecursive()
     }
@@ -758,9 +771,9 @@ export default class TransportAction extends Component {
 
     const list = await this.list(typeFrom, fromPath, tabId)
     const bigFileSize = 1024 * 1024
-    const smallFilesBatch = this.isFtp ? 1 : 30
-    const BigFilesBatch = this.isFtp ? 1 : 3
-    const foldersBatch = this.isFtp ? 1 : 50
+    const smallFilesBatch = 30
+    const BigFilesBatch = 3
+    const foldersBatch = 50
 
     const {
       folders,

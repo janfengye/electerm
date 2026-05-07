@@ -6,14 +6,11 @@ import handleError from '../common/error-handler'
 import Modal from '../components/common/modal'
 import { debounce, some, get, pickBy } from 'lodash-es'
 import {
-  modals,
   leftSidebarWidthKey,
   rightSidebarWidthKey,
   addPanelWidthLsKey,
   dismissDelKeyTipLsKey,
-  connectionMap,
-  settingMap,
-  settingAiId
+  connectionMap
 } from '../common/constants'
 import * as ls from '../common/safe-local-storage'
 import { refs, refsStatic } from '../components/common/ref'
@@ -21,7 +18,6 @@ import { action } from 'manate'
 import uid from '../common/uid'
 import deepCopy from 'json-deep-copy'
 import { aiConfigsArr } from '../components/ai/ai-config-props'
-import settingList from '../common/setting-list'
 
 const e = window.translate
 const { assign } = Object
@@ -55,12 +51,7 @@ export default Store => {
   }
 
   Store.prototype.toggleAIConfig = function () {
-    const { store } = window
-    store.storeAssign({
-      settingTab: settingMap.setting
-    })
-    store.setSettingItem(settingList().find(d => d.id === settingAiId))
-    store.openSettingModal()
+    window.store.showAIConfigModal = true
   }
 
   Store.prototype.onResize = debounce(async function () {
@@ -93,33 +84,6 @@ export default Store => {
 
   Store.prototype.setState = function (name, value) {
     window.store['_' + name] = JSON.stringify(value)
-  }
-
-  Store.prototype.toggleBatchOp = function () {
-    window.store.showModal = window.store.showModal === modals.batchOps ? modals.hide : modals.batchOps
-  }
-
-  Store.prototype.runBatchOp = function (path) {
-    window.store.showModal = modals.batchOps
-    async function updateText () {
-      const text = await window.fs.readFile(path)
-      refsStatic.get('batch-op')?.setState({
-        text
-      })
-    }
-    function queue () {
-      refsStatic.get('batch-op')?.handleClick()
-    }
-    function run () {
-      refsStatic.get('batch-op')?.handleExec()
-    }
-    try {
-      setTimeout(updateText, 2000)
-      setTimeout(queue, 3000)
-      setTimeout(run, 4000)
-    } catch (e) {
-      console.error(e)
-    }
   }
 
   Store.prototype.setSettingItem = function (v) {

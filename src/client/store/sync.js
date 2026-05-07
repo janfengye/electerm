@@ -68,11 +68,12 @@ export default (Store) => {
       ).join('####')
     }
     if (type === syncTypes.webdav) {
-      // WebDAV token format: serverUrl####username####password
+      // WebDAV token format: serverUrl####username####password####skipVerify
       const serverUrl = get(window.store.config, 'syncSetting.webdavServerUrl')
       const username = get(window.store.config, 'syncSetting.webdavUsername')
       const password = get(window.store.config, 'syncSetting.webdavPassword')
-      return [serverUrl, username, password].join('####')
+      const skipVerify = get(window.store.config, 'syncSetting.webdavSkipVerify') || false
+      return [serverUrl, username, password, skipVerify].join('####')
     }
     return get(window.store.config, 'syncSetting.' + type + 'AccessToken')
   }
@@ -171,6 +172,30 @@ export default (Store) => {
         }
       } else if (gistId) {
         await store.uploadSetting(type)
+      }
+    }
+    window.onSyncAll = false
+  }
+
+  Store.prototype.downloadSettingAll = async function () {
+    const { store, onSyncAll } = window
+    if (store.autoSyncReady === false) {
+      return
+    }
+    if (onSyncAll) {
+      return
+    }
+    window.onSyncAll = true
+    const types = Object.keys(syncTypes)
+    for (const type of types) {
+      const gistId = store.getSyncGistId(type)
+      if (type === syncTypes.webdav) {
+        const serverUrl = get(window.store.config, 'syncSetting.webdavServerUrl')
+        if (serverUrl) {
+          await store.downloadSetting(type)
+        }
+      } else if (gistId) {
+        await store.downloadSetting(type)
       }
     }
     window.onSyncAll = false
@@ -561,7 +586,7 @@ export default (Store) => {
 
   Store.prototype.handleAutoSync = function (v) {
     const { store } = window
-    store.setConfig({
+    store.updateSyncSetting({
       autoSync: v
     })
   }
