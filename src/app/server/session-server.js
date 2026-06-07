@@ -46,8 +46,7 @@ function markConnected () {
 }
 
 function verify (req) {
-  const protocols = (req.headers['sec-websocket-protocol'] || '').split(',').map(s => s.trim())
-  const to = protocols[0] || req.query.token
+  const { token: to } = req.query
   if (to !== tokenElecterm) {
     throw new Error('not valid request')
   }
