@@ -26,6 +26,7 @@
 
 开源终端/ssh/telnet/serialport/RDP/VNC/Spice/sftp/ftp客户端(linux, mac, win)。
 
+- [electerm.org](https://electerm.org): 主页，下载，视频等
 - [electerm-web](https://github.com/electerm/electerm-web): 运行于浏览器(支持移动设备)的web app版本
 - [electerm-web-docker](https://github.com/electerm/electerm-web-docker): electerm-web的docker镜像
 - [electerm online](https://cloud.electerm.org): 公共免费在线electerm应用
@@ -69,11 +70,6 @@
 - 支持命令行使用: 请参阅[wiki](https://github.com/electerm/electerm/wiki/Command-line-usage)
 - 深度链接支持: 使用 `telnet://192.168.2.31:34554` 或 `ssh://user@host:22` 等URL打开连接 - 详见 [深度链接支持 wiki](https://github.com/electerm/electerm/wiki/Deep-link-support)
 
-## 下载
-
-- [主页](https://electerm.org)
-- [sourceforge](https://sourceforge.net/projects/electerm.mirror/files/)
-- [github releases](https://github.com/electerm/electerm/releases)
 
 ## 安装
 

@@ -26,8 +26,9 @@
 
 Open-sourced terminal/ssh/sftp/telnet/serialport/RDP/VNC/Spice/ftp client(linux, mac, win).
 
-- [electerm-web](https://github.com/electerm/electerm-web): web app version running in browser(including mobile device)
-- [electerm-web-docker](https://github.com/electerm/electerm-web-docker): docker image for electerm-web
+- [electerm.org](https://electerm.org): Homepage, downloads, videos, etc
+- [electerm-web](https://github.com/electerm/electerm-web): Web app version running in browser(including mobile device)
+- [electerm-web-docker](https://github.com/electerm/electerm-web-docker): Docker image for electerm-web
 - [electerm online](https://cloud.electerm.org): Public free online electerm app
 - [electerm demo](https://demo.electerm.org): Online demo
 
@@ -68,12 +69,6 @@ Open-sourced terminal/ssh/sftp/telnet/serialport/RDP/VNC/Spice/ftp client(linux,
 - MCP (Model Context Protocol) widget for AI assistants and external tools integration - see [MCP Widget Usage Guide](https://github.com/electerm/electerm/wiki/MCP-Widget-Usage-Guide)
 - Deep link support: Open connections with URLs like `telnet://192.168.2.31:34554` or `ssh://user@host:22` - see [Deep link support wiki](https://github.com/electerm/electerm/wiki/Deep-link-support)
 - Command line usage: check [wiki](https://github.com/electerm/electerm/wiki/Command-line-usage)
-
-## Download
-
-- [Homepage](https://electerm.org)
-- [sourceforge](https://sourceforge.net/projects/electerm.mirror/files/)
-- [github releases](https://github.com/electerm/electerm/releases)
 
 ## Install
 
