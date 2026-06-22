@@ -80,7 +80,7 @@
   "mac": {
     "category": "public.app-category.developer-tools",
     "target": "dmg",
-    "icon": "node_modules/@electerm/electerm-resource/build/icons.icns",
+    "icon": "node_modules/@electerm/electerm-resource/mac-icon-no-corner/icons.icns",
     "publish": {
       "provider": "github",
       "channel": "${env.WORKFLOW_NAME}"
