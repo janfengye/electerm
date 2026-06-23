@@ -9,14 +9,8 @@ const {
 
 const options = {
   files: require('path').resolve(__dirname, '../../electron-builder.json'),
-  from: [
-    '${productName}-${version}-${os}-${arch}.${ext}', // eslint-disable-line
-    'node_modules/@electerm/electerm-resource/mac-icon-no-corner/icons.icns'
-  ],
-  to: [
-    '${productName}-${version}-${os}10-${arch}.${ext}', // eslint-disable-line
-    'node_modules/@electerm/electerm-resource/build/icons.icns'
-  ]
+  from: ['${productName}-${version}-${os}-${arch}.${ext}'], // eslint-disable-line
+  to: ['${productName}-${version}-${os}10-${arch}.${ext}'] // eslint-disable-line
 }
 
 function replaceRun () {
