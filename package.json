@@ -1,6 +1,6 @@
 {
   "name": "electerm",
-  "version": "3.15.76",
+  "version": "3.15.77",
   "description": "Terminal/ssh/telnet/serialport/sftp client(linux, mac, win)",
   "main": "app.js",
   "bin": "npm/electerm",
@@ -55,7 +55,7 @@
   "preferGlobal": true,
   "devDependencies": {
     "@ant-design/icons": "6.1.0",
-    "@electerm/electerm-resource": "^2.0.13",
+    "@electerm/electerm-resource": "2.1.0",
     "@fontsource/maple-mono": "^5.2.5",
     "@novnc/novnc": "1.4.0",
     "@types/node": "22.9.3",
@@ -131,7 +131,7 @@
     "ssh2-scp": "3.2.0",
     "tar": "7.5.12",
     "trzsz2": "1.2.0",
-    "zmodem2": "1.3.0"
+    "zmodem2": "1.4.0"
   },
   "files": [
     "npm",
