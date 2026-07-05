@@ -4,7 +4,8 @@ import clone from '../../common/to-simple-obj.js'
 import resolve from '../../common/resolve.js'
 import {
   Spin,
-  Dropdown
+  Dropdown,
+  Button
 } from 'antd'
 import message from '../common/message'
 import { notification } from '../common/notification'
@@ -40,6 +41,9 @@ import { getFolderFromFilePath } from '../sftp/file-read.js'
 import { CommandTrackerAddon } from './command-tracker-addon.js'
 import { Osc52Addon } from './osc52-addon.js'
 import AIIcon from '../icons/ai-icon.jsx'
+import {
+  AimOutlined
+} from '@ant-design/icons'
 import {
   getShellIntegrationCommand,
   detectRemoteShell,
@@ -90,7 +94,8 @@ class Term extends Component {
       reconnectCountdown: null,
       terminalError: null,
       dropFileModalVisible: false,
-      droppedFiles: []
+      droppedFiles: [],
+      fontSizeChanged: false
     }
     this.id = `term-${this.props.tab.id}`
     refs.add(this.id, this)
@@ -230,6 +235,10 @@ class Term extends Component {
         if (['fontFamily', 'fontSize'].includes(name)) {
           this.onResize()
         }
+        if (name === 'fontSize') {
+          this.originalFontSize = curr
+          this.setState({ fontSizeChanged: false })
+        }
       }
     }
 
@@ -291,6 +300,23 @@ class Term extends Component {
     }
     term.options.fontSize = term.options.fontSize + v
     window.store.triggerResize()
+    if (this.originalFontSize == null) {
+      this.originalFontSize = term.options.fontSize - v
+    }
+    this.setState({
+      fontSizeChanged: term.options.fontSize !== this.originalFontSize
+    })
+  }
+
+  handleResetFontSize = () => {
+    const { term } = this
+    if (!term || this.originalFontSize == null) {
+      return
+    }
+    term.options.fontSize = this.originalFontSize
+    window.store.triggerResize()
+    this.setState({ fontSizeChanged: false })
+    term.focus()
   }
 
   isActiveTerminal = () => {
@@ -1720,6 +1746,23 @@ class Term extends Component {
     Object.assign(window.store.terminalInfoProps, infoProps)
   }
 
+  renderResetFontSizeButton = () => {
+    if (!this.state.fontSizeChanged) {
+      return null
+    }
+    const txt = `${e('reset')} ${e('fontSize')}`
+    return (
+      <Button
+        className='terminal-fontsize-reset'
+        onClick={this.handleResetFontSize}
+        type='default'
+        size='small'
+        title={txt}
+        icon={<AimOutlined />}
+      />
+    )
+  }
+
   // getPwd = async () => {
   //   const { sessionId, config } = this.props
   //   const { pid } = this.state
@@ -1818,6 +1861,7 @@ class Term extends Component {
           <ReconnectOverlay
             countdown={this.state.reconnectCountdown}
           />
+          {this.renderResetFontSizeButton()}
           <DropFileModal
             visible={this.state.dropFileModalVisible}
             files={this.state.droppedFiles}
