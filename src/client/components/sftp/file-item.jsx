@@ -38,6 +38,7 @@ import generate from '../../common/uid'
 import sanitizeFilename from '../../common/sanitize-filename'
 import { refsStatic, refs, filesRef } from '../common/ref'
 import iconsMap from '../sys-menu/icons-map'
+import message from '../common/message'
 
 const e = window.translate
 
@@ -377,6 +378,46 @@ export default class FileSection extends React.Component {
     })
   }
 
+  getExt = (name = '') => {
+    const parts = String(name).split('.')
+    if (parts.length < 2) {
+      return ''
+    }
+    return parts[parts.length - 1].toLowerCase()
+  }
+
+  showCompare = () => {
+    const { type } = this.props
+    const selected = this.props.getSelectedFiles().filter(f => !f.isDirectory)
+    if (selected.length !== 2) {
+      return
+    }
+    refsStatic.get('file-compare-modal')?.showFileCompareModal({
+      file1: selected[0],
+      file2: selected[1],
+      tab: this.props.tab,
+      uidTree: this.props[`${type}UidTree`],
+      gidTree: this.props[`${type}GidTree`]
+    })
+  }
+
+  canCompare = () => {
+    const { selectedFiles } = this.props
+    if (!selectedFiles || selectedFiles.size !== 2) {
+      return false
+    }
+    const selected = this.props.getSelectedFiles()
+    if (selected.length !== 2) {
+      return false
+    }
+    if (selected.some(f => f.isDirectory || !f.id)) {
+      return false
+    }
+    const ext1 = this.getExt(selected[0].name)
+    const ext2 = this.getExt(selected[1].name)
+    return ext1 === ext2
+  }
+
   cancelNew = (type) => {
     let list = this.props[type]
     list = list.filter(p => p.id)
@@ -617,9 +658,15 @@ export default class FileSection extends React.Component {
       tempPath = window.pre.resolve(path, name)
     } else {
       const id = generate()
+      const safeName = sanitizeFilename(name)
       tempPath = window.pre.resolve(
-        window.pre.tempDir, `electerm-temp-${id}-${name}`
+        window.pre.tempDir, `electerm-temp-${id}-${safeName}`
       )
+      // Defense-in-depth: verify the resolved path stays within tempDir
+      if (!tempPath.startsWith(window.pre.tempDir + window.pre.sep)) {
+        message.error(e('invalidTempFilePath'))
+        return
+      }
       await window.fs.writeFile(tempPath, text)
     }
     this.watchingFile = tempPath
@@ -637,9 +684,15 @@ export default class FileSection extends React.Component {
       tempPath = window.pre.resolve(path, name)
     } else {
       const id = generate()
+      const safeName = sanitizeFilename(name)
       tempPath = window.pre.resolve(
-        window.pre.tempDir, `electerm-temp-${id}-${name}`
+        window.pre.tempDir, `electerm-temp-${id}-${safeName}`
       )
+      // Defense-in-depth: verify the resolved path stays within tempDir
+      if (!tempPath.startsWith(window.pre.tempDir + window.pre.sep)) {
+        message.error(e('invalidTempFilePath'))
+        return
+      }
       await window.fs.writeFile(tempPath, text)
     }
     this.watchingFile = tempPath
@@ -1156,6 +1209,13 @@ export default class FileSection extends React.Component {
         func: 'showInfo',
         icon: 'InfoCircleOutlined',
         text: e('info')
+      })
+    }
+    if (this.canCompare()) {
+      res.push({
+        func: 'showCompare',
+        icon: 'SwapOutlined',
+        text: e('compare')
       })
     }
     return res
