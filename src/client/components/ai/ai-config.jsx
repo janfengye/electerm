@@ -18,6 +18,7 @@ import Password from '../common/password'
 import AiHistory, { addHistoryItem } from './ai-history'
 import message from '../common/message'
 import { getAIPresets } from './ai-config-props'
+import { appendMandatoryGuardrails } from './ai-guardrails'
 
 const STORAGE_KEY_CONFIG = 'ai_config_history'
 const EVENT_NAME_CONFIG = 'ai-config-history-update'
@@ -74,7 +75,7 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         'AIchat',
         'Hi',
         values.modelAI,
-        values.roleAI,
+        appendMandatoryGuardrails(values.roleAI),
         values.baseURLAI,
         values.apiPathAI,
         values.apiKeyAI,
@@ -164,7 +165,14 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
           <Link to={aiConfigWikiLink}>WIKI: {aiConfigWikiLink}</Link>
         }
         type='info'
-        className='mg2y'
+        className='mg2t mg1b'
+      />
+      <Alert
+        title={
+          window.translate('aiWarn')
+        }
+        type='warning'
+        className='mg2b'
       />
       <div className='mg1b alignright'>
         {renderPresetMenu()}
