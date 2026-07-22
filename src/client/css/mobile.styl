@@ -132,3 +132,22 @@
       margin-inline-end 0
       &::before
         display none
+
+  // ---- 7. Terminal info panel button group: on narrow screens the connected
+  //        button row in terminal info panel wraps, but antd styles it as a
+  //        single horizontal strip. When the row wraps, the UI looks broken.
+  //        Convert each button to a standalone pill so wrapping stays tidy.
+  .terminal-info-base
+    .ant-space-compact
+      display flex
+      flex-wrap wrap
+      gap 6px
+      .ant-btn
+        border-radius 3px
+        margin-right 0
+
+  // ---- 8. Upgrade panel: fixed 440px width overflows narrow mobile screens.
+  //        Constrain it to the viewport minus the right offset (10px) and a
+  //        matching left gap so it never extends past the screen edge.
+  .upgrade-panel
+    max-width calc(100vw - 20px)
