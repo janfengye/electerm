@@ -402,13 +402,24 @@ class Term extends Component {
     if (isMac) {
       return true
     }
-    if (!this.isRemote()) {
+    if (!this.term) {
       return true
     }
-    if (this.term.buffer.active.type !== 'alternate') {
-      return false
+    // In alternate screen buffer (vim, less, etc.) let the keystroke
+    // pass through to the terminal so apps like vim can use Ctrl+V
+    // for visual-block mode.
+    if (this.term.buffer.active.type === 'alternate') {
+      return true
     }
-    return true
+    // Normal buffer (shell prompt): explicitly paste clipboard content.
+    // We call onPaste() directly instead of relying on the browser's
+    // native Ctrl+V paste event, because the Electron menu accelerator
+    // for paste is intentionally omitted on Windows/Linux to avoid
+    // intercepting Ctrl+V before xterm's alternate-buffer check runs.
+    e.preventDefault()
+    e.stopPropagation()
+    this.onPaste(true)
+    return false
   }
 
   showNormalBufferShortcut = (e) => {
@@ -1148,15 +1159,8 @@ class Term extends Component {
     }
   }
 
-  handleWebglContextLoss = (webglAddon = this.webglAddon) => {
-    if (this.webglRecovering) {
-      return
-    }
-    if (!webglAddon) {
-      return
-    }
-    this.webglRecovering = true
-    console.warn('webgl context lost, rebuilding webgl renderer')
+  reloadWebglRenderer = (reason = 'reload') => {
+    console.warn(`webgl renderer ${reason}, rebuilding`)
     try {
       this.webglContextLossDisposable?.dispose?.()
       this.webglContextLossDisposable = null
@@ -1164,21 +1168,28 @@ class Term extends Component {
       console.error(e)
     }
     try {
-      webglAddon.dispose()
+      this.webglAddon?.dispose?.()
     } catch (e) {
       console.error(e)
     }
     this.webglAddon = null
     const { term } = this
     const { config } = this.props
-    this.loadRenderer(term, config)
+    return this.loadRenderer(term, config)
       .then(() => {
-        // Repaint with the buffer content so recovered terminals are not blank.
         term.refresh(0, term.rows - 1)
       })
       .catch(e => {
-        console.error('rebuild webgl renderer failed', e)
+        console.error(`webgl renderer ${reason} failed`, e)
       })
+  }
+
+  handleWebglContextLoss = (webglAddon = this.webglAddon) => {
+    if (this.webglRecovering || !webglAddon) {
+      return
+    }
+    this.webglRecovering = true
+    this.reloadWebglRenderer('context loss')
       .finally(() => {
         this.webglRecovering = false
       })

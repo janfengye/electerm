@@ -1,15 +1,10 @@
-.l800
-  display none !important
-
-@media (max-width: 800px)
-  .w800
-    display none !important
-  .l800
-    display inline !important
+// Session pane tab label: show full name by default, short label on mobile
+.type-tab-short
+  display none
 
 // ---------------------------------------------------------------------------
 // Mobile UI driven by store.isMobile (is-mobile class on root)
-// Breakpoint: 800px (see mobileBreakpoint in constants.js)
+// Breakpoint: 600px (see mobileBreakpoint in constants.js)
 // ---------------------------------------------------------------------------
 .is-mobile
   // ---- 1. Tabs: show only current tab + dropdown, close icon always visible
@@ -151,3 +146,9 @@
   //        matching left gap so it never extends past the screen edge.
   .upgrade-panel
     max-width calc(100vw - 20px)
+
+  // ---- 9. Session pane tab label: hide full name, show short label
+  .type-tab-full
+    display none
+  .type-tab-short
+    display inline
