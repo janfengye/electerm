@@ -148,9 +148,14 @@ class Term extends Component {
       this.props.themeConfig,
       prevProps.themeConfig
     )
-    if (themeChanged && this.term) {
-      this.term.options.theme = this.getRendererThemeConfig(this.props.themeConfig)
+    // Also detect theme ID changes. Two different themes might share the
+    // same terminal colour config but have different UI colours (--main),
+    // which means the WebGL background needs to change even though
+    // themeConfig (terminal colours) is identical.
+    const themeIdChanged = prevProps.config?.theme !== this.props.config?.theme
+    if ((themeChanged || themeIdChanged) && this.term) {
       this.registerTerminalColorQueryHandlers(this.term, this.props.themeConfig)
+      this.applyTerminalTheme(true)
     }
   }
 
@@ -163,6 +168,8 @@ class Term extends Component {
       this.term.parent = null
     }
     this.disposeTerminalColorQueryHandlers()
+    window.cancelAnimationFrame(this.timers.themeRaf)
+    this.timers.themeRaf = null
     Object.keys(this.timers).forEach(k => {
       clearTimeout(this.timers[k])
       this.timers[k] = null
@@ -244,6 +251,18 @@ class Term extends Component {
           this.setState({ fontSizeChanged: false })
         }
       }
+    }
+
+    // Handle renderer type changes (dom <-> webGL) by reloading the
+    // renderer and refreshing the theme so the background color is
+    // correct for the new renderer.
+    if (
+      prevProps.config.rendererType !== props.config.rendererType &&
+      this.term
+    ) {
+      this.reloadWebglRenderer('renderer type change')
+        .then(() => this.applyTerminalTheme())
+        .catch(e => console.error('renderer type change failed', e))
     }
 
     // Check for shell integration related config changes
@@ -402,24 +421,13 @@ class Term extends Component {
     if (isMac) {
       return true
     }
-    if (!this.term) {
+    if (!this.isRemote()) {
       return true
     }
-    // In alternate screen buffer (vim, less, etc.) let the keystroke
-    // pass through to the terminal so apps like vim can use Ctrl+V
-    // for visual-block mode.
-    if (this.term.buffer.active.type === 'alternate') {
-      return true
+    if (this.term.buffer.active.type !== 'alternate') {
+      return false
     }
-    // Normal buffer (shell prompt): explicitly paste clipboard content.
-    // We call onPaste() directly instead of relying on the browser's
-    // native Ctrl+V paste event, because the Electron menu accelerator
-    // for paste is intentionally omitted on Windows/Linux to avoid
-    // intercepting Ctrl+V before xterm's alternate-buffer check runs.
-    e.preventDefault()
-    e.stopPropagation()
-    this.onPaste(true)
-    return false
+    return true
   }
 
   showNormalBufferShortcut = (e) => {
@@ -1204,9 +1212,15 @@ class Term extends Component {
 
   getVisibleTerminalBackground = () => {
     const uiThemeConfig = window.store?.getUiThemeConfig?.() || {}
-    const dom = this.domRef.current
-    const cssMain = dom && window.getComputedStyle
-      ? window.getComputedStyle(dom).getPropertyValue('--main').trim()
+    // The store value (uiThemeConfig.main) is always immediately up-to-date
+    // when the theme changes, because it reads directly from store.config.theme.
+    // The CSS --main variable lags behind because UiTheme's useEffect runs
+    // asynchronously after componentDidUpdate. So we prioritise the store
+    // value, and only fall back to CSS (for custom-CSS edge cases) or the
+    // terminal theme background (last resort).
+    const root = document.documentElement
+    const cssMain = root && window.getComputedStyle
+      ? window.getComputedStyle(root).getPropertyValue('--main').trim()
       : ''
     return uiThemeConfig.main || cssMain || this.props.themeConfig.background
   }
@@ -1241,6 +1255,32 @@ class Term extends Component {
     )
   }
 
+  /**
+   * Apply the current renderer theme to the terminal and trigger a repaint.
+   * When `deferred` is true (WebGL mode), a second repaint is scheduled on
+   * the next animation frame so the theme picks up CSS --main changes that
+   * UiTheme's useEffect applies asynchronously after componentDidUpdate.
+   * The optional `term` parameter is used during initTerminal, where
+   * this.term hasn't been assigned yet.
+   */
+  applyTerminalTheme = (deferred = false, term = this.term) => {
+    if (!term || this.onClose) {
+      return
+    }
+    term.options.theme = this.getRendererThemeConfig(this.props.themeConfig)
+    term.refresh(0, term.rows - 1)
+    if (deferred && this.props.config.rendererType === rendererTypes.webGL) {
+      window.cancelAnimationFrame(this.timers.themeRaf)
+      this.timers.themeRaf = window.requestAnimationFrame(() => {
+        if (!this.term || this.onClose) {
+          return
+        }
+        this.term.options.theme = this.getRendererThemeConfig(this.props.themeConfig)
+        this.term.refresh(0, this.term.rows - 1)
+      })
+    }
+  }
+
   initTerminal = async () => {
     const { themeConfig, tab = {}, config = {} } = this.props
     const tc = this.getRendererThemeConfig(themeConfig)
@@ -1264,6 +1304,14 @@ class Term extends Component {
     term.open(this.domRef.current, true)
     this.registerTerminalColorQueryHandlers(term, themeConfig)
     await this.loadRenderer(term, config)
+    // Re-apply the theme after the renderer is loaded. The Terminal was
+    // constructed before UiTheme's useEffect ran, so the initial theme
+    // may have a stale background. Pass `term` directly because this.term
+    // is not assigned yet. Use deferred=true so a second repaint picks up
+    // any CSS --main changes applied by UiTheme's useEffect.
+    if (config.rendererType === rendererTypes.webGL) {
+      this.applyTerminalTheme(true, term)
+    }
 
     const FitAddon = await loadFitAddon()
     this.fitAddon = new FitAddon()
