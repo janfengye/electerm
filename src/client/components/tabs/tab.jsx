@@ -121,6 +121,21 @@ class Tab extends Component {
     window.store.clickTab(this.props.tab.id, this.props.batch)
   }
 
+  onMouseEnter = () => {
+    const {
+      tab,
+      batch,
+      currentBatchTabId
+    } = this.props
+    if (document.querySelector('.' + onDragCls)) {
+      return
+    }
+    if (tab.id === currentBatchTabId) {
+      return
+    }
+    window.store.clickTab(tab.id, batch)
+  }
+
   onDrag = () => {
     addClass(this.tabRef.current, onDragCls)
   }
@@ -441,7 +456,8 @@ class Tab extends Component {
     const {
       isLast,
       tab,
-      currentBatchTabId
+      currentBatchTabId,
+      config
     } = this.props
     const {
       id,
@@ -499,6 +515,7 @@ class Tab extends Component {
           data-id={id}
           {...pick(this, [
             'onDrag',
+            ...(config && config.switchTabOnHover ? ['onMouseEnter'] : []),
             'onDragEnter',
             'onDragExit',
             'onDragLeave',

@@ -603,6 +603,7 @@ export default class SettingCommon extends Component {
             'hideIP',
             'allowMultiInstance',
             'disableDeveloperTool',
+            'switchTabOnHover',
             'debug'
           ].map(this.renderToggle)
         }
