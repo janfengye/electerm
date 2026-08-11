@@ -42,6 +42,7 @@ import { pick } from 'lodash-es'
 import deepCopy from 'json-deep-copy'
 import './wrapper.styl'
 import TerminalInfo from '../terminal-info/terminal-info-entry'
+import ShortcutBarEntry from '../terminal/shortcut-bar-entry'
 import '../../common/fs.js'
 import './term-fullscreen.styl'
 
@@ -181,7 +182,8 @@ export default auto(function Index (props) {
     fileTransfers: copiedTransfer,
     transferHistory: copiedHistory,
     upgradeInfo,
-    pinned
+    pinned,
+    leftSideBarIcons: config.leftSideBarIcons
   }
 
   const infoModalProps = {
@@ -311,6 +313,7 @@ export default auto(function Index (props) {
         <BookmarkFromHistoryModal />
         <NotificationContainer />
         <BatchOpRunner />
+        <ShortcutBarEntry store={store} />
         {!isAIDisabled() && <AIConfigModal store={store} />}
         <UnixTimestampTooltip />
       </div>
