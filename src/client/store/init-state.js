@@ -19,7 +19,6 @@ import {
   leftSidePanelWidthKey,
   rightSidebarWidthKey,
   addPanelWidthLsKey,
-  dismissDelKeyTipLsKey,
   qmSortByFrequencyKey,
   resolutionsLsKey,
   syncServerDataKey,
@@ -30,7 +29,6 @@ import {
 import * as ls from '../common/safe-local-storage'
 import { exclude } from 'manate'
 import initSettingItem from '../common/init-setting-item'
-import { getRandomDefaultColor } from '../common/rand-hex-color'
 
 const e = window.translate
 
@@ -40,7 +38,7 @@ function getDefaultBookmarkGroups (bookmarks) {
       title: e(defaultBookmarkGroupId),
       id: defaultBookmarkGroupId,
       bookmarkIds: bookmarks.map(d => d.id),
-      color: getRandomDefaultColor()
+      color: '#0088cc'
     })
   ]
 }
@@ -216,7 +214,6 @@ export default () => {
     hasNodePty: window.pre.runSync('nodePtyCheck'),
     isMobile: window.innerWidth <= mobileBreakpoint,
     fullscreen: false,
-    hideDelKeyTip: ls.getItem(dismissDelKeyTipLsKey) === 'y',
     tabsHeight: 36,
 
     // widgets
