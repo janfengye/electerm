@@ -9,7 +9,8 @@ import { lazy, Suspense } from 'react'
 import SettingModal from './setting-wrap'
 import {
   settingMap,
-  modals
+  modals,
+  settingPanelMobileBreakpoint
 } from '../../common/constants'
 const TabBookmarks = lazy(() => import('./tab-bookmarks'))
 const TabQuickCommands = lazy(() => import('./tab-quick-commands'))
@@ -25,6 +26,11 @@ const e = window.translate
 export default auto(function SettingModalWrap (props) {
   const selectItem = (item) => {
     window.store.setSettingItem(item)
+    // narrow panels drill into the right col content after picking a menu
+    // item — same 800px breakpoint as the setting panel media query
+    if (window.store.innerWidth <= settingPanelMobileBreakpoint) {
+      window.store.settingMobileView = 'content'
+    }
   }
 
   function renderTabs () {
@@ -188,7 +194,6 @@ export default auto(function SettingModalWrap (props) {
       visible={show}
       useSystemTitleBar={useSystemTitleBar}
       innerWidth={innerWidth}
-      isMobile={props.store.isMobile}
     >
       {renderTabs()}
     </SettingModal>

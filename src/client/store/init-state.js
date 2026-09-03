@@ -134,6 +134,8 @@ export default () => {
     settingTab: settingMap.bookmarks, // setting tab
     bookmarkId: undefined,
     showModal: 0,
+    // mobile settings view: 'menu' (left col list, default) or 'content' (right col)
+    settingMobileView: 'menu',
 
     // setting sync related
     autoSyncReady: false,
@@ -213,6 +215,11 @@ export default () => {
     isMaximized: window.pre.runSync('isMaximized'),
     hasNodePty: window.pre.runSync('nodePtyCheck'),
     isMobile: window.innerWidth <= mobileBreakpoint,
+    // reflects the input device actually in use, not screen capability — a
+    // capability probe only proves the screen can be touched, not whether the
+    // user operates it by touch. Seeded false and left to main.jsx, which sets
+    // mouse → false / touch → true on the first real pointer event.
+    isTouchDevice: false,
     fullscreen: false,
     tabsHeight: 36,
 
