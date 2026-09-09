@@ -1,6 +1,7 @@
 /**
  * constants
  */
+import { isMacJs } from './platform.js'
 import logoPath1Ref from '@electerm/electerm-resource/res/imgs/electerm-round-128x128.png'
 import logoPath2Ref from '@electerm/electerm-resource/res/imgs/electerm.png'
 import logoPath3Ref from '@electerm/electerm-resource/res/imgs/electerm-watermark.png'
@@ -82,9 +83,7 @@ export const footerHeight = 36
 export const quickCommandBoxHeight = 180
 export const shortcutBarHeight = 44
 export const shortcutBarLsKey = 'shortcut-bar-buttons'
-export const isWin = typeof window.et.isWin === 'undefined' ? window.pre.isWin : window.et.isWin
-export const isMac = typeof window.et.isMac === 'undefined' ? window.pre.isMac : window.et.isMac
-export const isMacJs = /Macintosh|Mac|Mac OS|MacIntel|MacPPC|Mac68K/gi.test(window.navigator.userAgent)
+export { isWin, isMac, isMacJs } from './platform.js'
 export const ctrlOrCmd = isMacJs ? 'cmd' : 'ctrl'
 export const typeMap = buildConst([
   'remote',
@@ -107,13 +106,15 @@ export const settingMap = buildConst([
   'addressBookmarks',
   'profiles',
   'widgets',
-  'workspaces'
+  'workspaces',
+  'triggers'
 ])
 
 export const staticNewItemTabs = new Set([
   'terminalThemes',
   'quickCommands',
-  'profiles'
+  'profiles',
+  'triggers'
 ])
 
 export const infoTabs = buildConst([
@@ -365,7 +366,8 @@ export const syncDataMaps = {
   quickCommands: ['quickCommands'],
   profiles: ['profiles'],
   addressBookmarks: ['addressBookmarks'],
-  workspaces: ['workspaces']
+  workspaces: ['workspaces'],
+  triggers: ['triggers']
 }
 export const terminalTypes = [
   'xterm-256color',
