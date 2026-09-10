@@ -2,11 +2,10 @@ import { auto } from 'manate/react'
 import { Button, Popover } from 'antd'
 import {
   CloseOutlined,
-  SettingOutlined,
   WarningOutlined
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { settingMap, settingCommonId, statusMap } from '../../common/constants'
+import { statusMap } from '../../common/constants'
 import {
   formatBytes,
   groupOf,
@@ -14,12 +13,14 @@ import {
   MONITOR_ITEM_GROUP,
   formatRate,
   normalizeRemoteMonitorItems,
+  REMOTE_MONITOR_ITEM_IDS,
   selectPrimaryNetwork
 } from './monitor-model'
 import { useMonitorDetails } from './use-monitor-details'
 import MonitorDetails, { Sparkline } from './monitor-details'
 import { getRemoteMonitorTab, isRemoteMonitorBarVisible } from './visibility'
 import { runCmd } from '../terminal/terminal-apis'
+import ItemFilter from '../common/item-filter'
 import './remote-monitor-bar.styl'
 
 const e = window.translate
@@ -177,6 +178,12 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
   const enabledItems = items.filter(item => item.enabled)
   const [openId, setOpenId] = useState(null)
   const [pinnedId, setPinnedId] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  // Touch has no hover, so the details popover there is click-driven: a tap
+  // toggles it and a tap outside closes it (store.isTouchDevice follows the
+  // input the user actually uses, see main.jsx). The hover/pin bookkeeping
+  // below is mouse-only.
+  const touchMode = !!store.isTouchDevice
   const connected = visible && tab.status === statusMap.success
   const requestedItems = enabledItems.map(item => item.id)
   if (openId === 'cpu' || openId === 'memory') requestedItems.push('activities')
@@ -187,11 +194,26 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
     setPinnedId(null)
   }, [tab.id, itemsKey, visible])
 
+  // keep the controls revealed while the filter popover is open, the popover
+  // lives in a portal so hovering it does not keep the bar hovered
+  useEffect(() => {
+    setFilterOpen(false)
+  }, [tab.id, visible])
+
   if (!visible) {
     return null
   }
 
   function handleOpenChange (id, open) {
+    if (touchMode) {
+      // the popover click trigger owns open/close
+      if (open) {
+        setOpenId(id)
+      } else {
+        closePopover()
+      }
+      return
+    }
     if (open) {
       setOpenId(id)
       if (pinnedId && pinnedId !== id) {
@@ -203,6 +225,10 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
   }
 
   function handleClick (id) {
+    if (touchMode) {
+      // click trigger already toggled it, don't toggle twice
+      return
+    }
     if (pinnedId === id) {
       setPinnedId(null)
       setOpenId(null)
@@ -217,14 +243,14 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
     setOpenId(null)
   }
 
-  function openSettings () {
-    store.settingTab = settingMap.setting
-    store.setSettingItem({
-      id: settingCommonId,
-      title: e('remoteMonitorBar')
+  function toggleItem (id) {
+    const next = items.map(item => (
+      item.id === id ? { ...item, enabled: !item.enabled } : item
+    ))
+    store.setConfig({
+      // keep the stored shape in sync with the setting panel: enabled ids only
+      remoteMonitorBarItems: next.filter(item => item.enabled).map(item => item.id)
     })
-    store.openSettingModal()
-    store.settingMobileView = 'content'
   }
 
   const connectionMessage = tab.status === statusMap.error
@@ -234,7 +260,7 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
   return (
     <div
       aria-label={e('remoteMonitorBar')}
-      className='remote-monitor-bar'
+      className={'remote-monitor-bar' + (filterOpen ? ' remote-monitor-bar-filter-open' : '')}
       onKeyDown={event => {
         if (event.key === 'Escape') {
           closePopover()
@@ -275,7 +301,7 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
                     onOpenChange={open => handleOpenChange(item.id, open)}
                     open={openId === item.id}
                     placement='top'
-                    trigger={['hover', 'focus']}
+                    trigger={touchMode ? 'click' : ['hover', 'focus']}
                   >
                     <button
                       aria-label={`${label}: ${accessibleSummary}; ${statusText(level)}`}
@@ -296,13 +322,13 @@ export default auto(function RemoteMonitorBar ({ store, style }) {
         }
       </div>
       <div className='remote-monitor-controls'>
-        <Button
-          aria-label={e('configure')}
-          icon={<SettingOutlined />}
-          onClick={openSettings}
-          size='small'
-          title={e('configure')}
-          type='text'
+        <ItemFilter
+          className='remote-monitor-filter'
+          ids={REMOTE_MONITOR_ITEM_IDS}
+          onOpenChange={setFilterOpen}
+          onToggle={toggleItem}
+          placement='topRight'
+          selected={enabledItems.map(item => item.id)}
         />
         <Button
           aria-label={e('close')}

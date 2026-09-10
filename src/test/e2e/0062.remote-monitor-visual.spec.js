@@ -77,6 +77,10 @@ test('remote monitor styles, panel geometry and mobile overflow', async () => {
     for (const width of [1200, 375]) {
       await page.setViewportSize({ width, height: 800 })
       await page.waitForFunction(width => window.store.width === width, width)
+      if (width === 375) {
+        assert.equal(await bar.evaluate(node => window.getComputedStyle(node).position), 'fixed')
+        assert.equal(await page.locator('.main-footer').evaluate(node => window.getComputedStyle(node).position), 'fixed')
+      }
       for (const sidebar of [false, true]) {
         for (const pinned of [false, true]) {
           for (const rightPinned of [false, true]) {
@@ -162,11 +166,11 @@ test('remote monitor styles, panel geometry and mobile overflow', async () => {
     assert.equal(await page.evaluate(() => window.store.config.remoteMonitorBarEnabled), true)
     await page.locator('.right-side-panel-close').click()
     await bar.waitFor({ state: 'visible' })
-    await bar.locator('.remote-monitor-controls .ant-btn').first().click()
-    const select = page.locator('.remote-monitor-item-select')
-    await select.waitFor()
-    const selectBounds = await select.boundingBox()
-    assert.ok(selectBounds.x >= 0 && selectBounds.x + selectBounds.width <= 375)
+    await bar.locator('.remote-monitor-controls .item-filter').click()
+    const filterList = page.locator('.item-filter-list:visible')
+    await filterList.waitFor()
+    const filterBounds = await filterList.boundingBox()
+    assert.ok(filterBounds.x >= 0 && filterBounds.x + filterBounds.width <= 375)
   } finally {
     await app.close().catch(() => {})
     fs.rmSync(profileRoot, { recursive: true, force: true })
