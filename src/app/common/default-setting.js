@@ -52,6 +52,18 @@ module.exports = exports.default = {
     'network',
     'disks'
   ],
+  remoteMonitorBarEnabled: false,
+  remoteMonitorBarItems: [
+    'hostname',
+    'cpu',
+    'cpuHistory',
+    'memory',
+    'upload',
+    'download',
+    'uptime',
+    'users',
+    'disks'
+  ],
   filePropsEnabled: [
     'name',
     'size',
@@ -60,8 +72,8 @@ module.exports = exports.default = {
   hideIP: false,
   dataSyncSelected: 'all',
   nameAI: '',
-  baseURLAI: 'https://api.atlascloud.ai/v1',
-  modelAI: 'deepseek-chat',
+  baseURLAI: 'https://ai.electerm.org/api/ai',
+  modelAI: 'free',
   roleAI: '终端专家,提供不同系统下命令,简要解释用法,用markdown格式',
   apiPathAI: '/chat/completions',
   authHeaderNameAI: 'Authorization: Bearer',
