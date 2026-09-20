@@ -1,5 +1,14 @@
 export const defaultAIPresets = [
   {
+    id: 'fluxionai',
+    nameAI: 'FluxionAI',
+    baseURLAI: 'https://fluxionai.world/v1',
+    apiPathAI: '/chat/completions',
+    modelAI: 'deepseek-v4-flash-0731',
+    authHeaderNameAI: 'Authorization: Bearer',
+    siteUrl: 'https://fluxionai.world/register?aff=7H7DERHU3GFF&utm_source=github&utm_medium=link&utm_campaign=electerm'
+  },
+  {
     id: 'atlascloud',
     nameAI: 'AtlasCloud',
     baseURLAI: 'https://api.atlascloud.ai/v1',
@@ -166,8 +175,10 @@ export const defaultAIPresets = [
 
 export function getAIPresets () {
   const presets = [...defaultAIPresets]
-  if (window.et?.defaultAIPreset) {
-    presets.unshift(window.et.defaultAIPreset)
+  const customPreset = window.et?.defaultAIPreset
+  if (customPreset) {
+    // keep the first preset (sponsor) on top, insert after it
+    presets.splice(1, 0, customPreset)
   }
   return presets
 }
