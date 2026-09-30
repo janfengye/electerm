@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Flex, Input, Segmented, Button, Tag, message } from 'antd'
+import { Flex, Input, Segmented, Button, Tag, message, Popover } from 'antd'
 import TabSelect from '../footer/tab-select'
 import AiChatHistory from './ai-chat-history'
 import AiChatSessions from './ai-chat-sessions'
 import AiContextIndicator from './ai-context-indicator'
-import { buildSessionMessages, summarizeContext, getUsageLevel, formatPercent } from './ai-context'
+import SwitchLabel from '../common/switch'
+import { buildSessionMessages, summarizeContext, getUsageLevel } from './ai-context'
 import { appendMandatoryGuardrails } from './ai-guardrails'
 import uid from '../../common/uid'
 import { pick } from 'lodash-es'
@@ -42,6 +43,7 @@ export default function AIChat (props) {
   const fileInputRef = useRef(null)
   const [mode, setMode] = useState(() => getItem(aiChatModeLsKey) || 'ask')
   const isAgent = mode === 'agent'
+  const autoCompress = !!props.aiAutoCompress
   const submitDisabled = isAgent && props.agentRunning
 
   const currentChatSessionId = props.currentChatSessionId || ''
@@ -153,6 +155,12 @@ export default function AIChat (props) {
     if (window.store.aiConfigMissing()) {
       window.store.toggleAIConfig()
     }
+    // Read the live flag rather than the rendered one. `submitDisabled` can be
+    // stale: the loop sets `agentRunning` from the new turn's mount effect, and
+    // manate's `auto` re-subscribes its listener on every render, so a write
+    // landing in that window never reaches the panel -- leaving the icon looking
+    // enabled while a run is in flight, which let a second agent turn through.
+    if (isAgent && window.store.agentRunning) return
     if (!prompt.trim() && !attachments.length) return
 
     const chatId = uid()
@@ -235,11 +243,39 @@ export default function AIChat (props) {
     }
   }
 
-  function renderCompressTitle () {
-    if ((contextLevel === 'warn' || contextLevel === 'danger') && contextInfo) {
-      return `Context is ${formatPercent(contextInfo.percent)} full — compress to summarize the session`
-    }
-    return 'Summarize this session into a single message, dropping the older history'
+  function handleAutoCompressChange (val) {
+    window.store.setAiAutoCompress(val)
+  }
+
+  // The toolbar button is the auto compress button: the popover behind it holds
+  // the persistent toggle plus the manual compress action, so one button covers
+  // both "keep this session small for me" and "compact it right now".
+  function renderAutoCompressPopover () {
+    return (
+      <div className='ai-auto-compress-popover'>
+        <Flex align='center' justify='space-between' gap={12}>
+          <span className='ai-auto-compress-label'>{e('autoCompress')}</span>
+          <SwitchLabel
+            checked={autoCompress}
+            onChange={handleAutoCompressChange}
+            size='small'
+          />
+        </Flex>
+        <hr />
+        <Flex vertical gap={4} align='flex-start'>
+          <Button
+            size='small'
+            icon={<CompressOutlined />}
+            onClick={handleCompressSession}
+            loading={compressing}
+            disabled={sessionHistory.length < 2}
+            type={contextLevel === 'warn' || contextLevel === 'danger' ? 'primary' : 'default'}
+          >
+            {e('compress')}
+          </Button>
+        </Flex>
+      </div>
+    )
   }
 
   function handleShowHistory () {
@@ -332,19 +368,20 @@ export default function AIChat (props) {
             >
               {e('new')}
             </Button>
-            {sessionHistory.length >= 2 && (
+            <Popover
+              content={renderAutoCompressPopover()}
+              trigger='click'
+              placement='topLeft'
+            >
               <Button
                 size='small'
                 icon={<CompressOutlined />}
-                onClick={handleCompressSession}
-                loading={compressing}
-                type={contextLevel === 'warn' ? 'primary' : 'default'}
-                danger={contextLevel === 'danger'}
-                title={renderCompressTitle()}
+                type={autoCompress ? 'primary' : 'default'}
+                danger={!autoCompress && contextLevel === 'danger'}
               >
-                {e('compress')}
+                {e('autoCompress')}
               </Button>
-            )}
+            </Popover>
             <Button
               size='small'
               icon={<HistoryOutlined />}
