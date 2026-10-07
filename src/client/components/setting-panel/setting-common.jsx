@@ -579,6 +579,7 @@ export default class SettingCommon extends Component {
             'disableTabIndex',
             'onlyShowTitleInTab',
             'disableShortcutBar',
+            'autoDistributeTabsWhenLayoutChange',
             'debug'
           ]
             .filter(name => !isWebApp || !webAppHiddenSettings.includes(name))

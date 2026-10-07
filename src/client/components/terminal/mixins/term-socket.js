@@ -124,6 +124,10 @@ export const socketMixin = {
       }
     }
     const keepaliveInterval = tab.keepaliveInterval || config.keepaliveInterval
+    // Remember which executable this session actually spawned (profile- and
+    // bookmark-applied). `cd()` in term-attach needs the same answer to pick
+    // CMD vs PowerShell syntax; the global setting alone is not enough.
+    this.localShell = execOpts[execPropName] || ''
     const opts = clone({
       cols,
       rows,
@@ -207,7 +211,7 @@ export const socketMixin = {
       // instead of leaving an unhandled rejection behind
       try {
         await this.initAttachAddon()
-        this.startupQueue.runInitScript()
+        this.startupQueue.runInitScript(opts[execPropName])
       } catch (e) {
         console.error(e)
         this.handleError({ message: e.message })
