@@ -9,6 +9,7 @@ import TextEditor from '../text-editor/text-editor-entry'
 import Sidebar from '../sidebar'
 import CssOverwrite from '../bg/css-overwrite'
 import UiTheme from './ui-theme'
+import TitleBarOverlay from './title-bar-overlay'
 import CustomCss from '../bg/custom-css.jsx'
 import TerminalInteractive from '../terminal/terminal-interactive'
 import ConfirmModalStore from '../file-transfer/conflict-resolve.jsx'
@@ -147,8 +148,13 @@ export default auto(function Index (props) {
   const cls = classnames({
     loaded: configLoaded,
     'not-webapp': !window.et.isWebApp,
-    'system-ui': store.config.useSystemTitleBar,
-    'not-system-ui': !store.config.useSystemTitleBar,
+    // the frame is the system one (macOS traffic lights, Linux/Windows title
+    // bar). Also true in Windows WCO mode, where the caption buttons are drawn
+    // over the tab bar and there is no title strip: the UI asks "is there a
+    // strip?" via store.hasNativeTitleStrip, not via this class.
+    'system-ui': store.isSystemTitleBar,
+    'not-system-ui': !store.isSystemTitleBar,
+    wco: store.isWindowControlsOverlay,
     'is-mac': isMac,
     'not-mac': !isMac,
     'is-win': isWin,
@@ -320,6 +326,9 @@ export default auto(function Index (props) {
         <UiTheme
           {...themeProps}
         />
+        {store.isWindowControlsOverlay && (
+          <TitleBarOverlay {...themeProps} />
+        )}
         <CustomCss customCss={config.customCss} configLoaded={configLoaded} />
         {store.textEditorRequested && (
           <TextEditor />
