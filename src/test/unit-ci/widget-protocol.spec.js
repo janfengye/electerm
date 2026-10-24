@@ -22,7 +22,11 @@ const REPO = path.resolve(__dirname, '../../..')
 const electronPath = require.resolve('electron')
 const protocolPath = require.resolve('../../app/widgets/protocol')
 const legacyPath = require.resolve('../../build/polyfills/electron-lt25/protocol-legacy')
-const { applyPolyfills, electronMajorVersion } = require('../../build/bin/inject-polyfills')
+const {
+  applyPolyfills,
+  electronMajorVersion,
+  main: injectPolyfillsEntry
+} = require('../../build/bin/inject-polyfills')
 
 let tmp
 let tmpData
@@ -268,6 +272,13 @@ describe('build-time injection', () => {
     }
   })
 
+  // prepare.js does `require('./inject-polyfills').main()`, so the entrypoint
+  // has to be exported. Missing it breaks every build with
+  // "require(...).main is not a function" instead of doing the injection.
+  it('exports the entrypoint prepare.js calls', () => {
+    assert.equal(typeof injectPolyfillsEntry, 'function')
+  })
+
   it('patches the packaged app for Electron 22 and copies the adapter', () => {
     const applied = applyPolyfills({ root: tree, major: 22, log: silent })
     assert.deepEqual(applied, ['widget protocol callback adapter'])
@@ -281,6 +292,30 @@ describe('build-time injection', () => {
     const before = readProtocol(tree)
     applyPolyfills({ root: tree, major: 22, log: silent })
     assert.equal(readProtocol(tree), before)
+  })
+
+  // The win7-tar runner checks out with core.autocrlf=true, so the anchor has to
+  // match a CRLF file — otherwise every Windows legacy build dies with
+  // "expected block not found".
+  it('patches a CRLF checkout and keeps its line endings', () => {
+    const crlf = makeTree('22.3.27')
+    try {
+      const file = path.join(crlf, 'work/app/widgets/protocol.js')
+      const original = fs.readFileSync(file, 'utf8').replace(/\r?\n/g, '\r\n')
+      fs.writeFileSync(file, original)
+      assert.deepEqual(
+        applyPolyfills({ root: crlf, major: 22, log: silent }),
+        ['widget protocol callback adapter']
+      )
+      const code = fs.readFileSync(file, 'utf8')
+      assert.match(code, /require\('\.\/protocol-legacy'\)/)
+      assert.doesNotMatch(code, /[^\r]\n/, 'every newline should still be CRLF')
+      // and it stays put on a second run
+      applyPolyfills({ root: crlf, major: 22, log: silent })
+      assert.equal(fs.readFileSync(file, 'utf8'), code)
+    } finally {
+      fs.rmSync(crlf, { recursive: true, force: true })
+    }
   })
 
   it('leaves the source tree alone', () => {
