@@ -37,6 +37,12 @@ const rdpConfig = {
         // the bookmark's decision, not something the client negotiates:
         // without NLA nothing authenticates the server, so no password is sent
         { type: 'switch', name: 'nla', label: 'Network level authentication (NLA)', valuePropName: 'checked' },
+        {
+          type: 'switch',
+          name: 'nativeRdp',
+          label: e('openWithLocalRdp') + ' (Windows Only)',
+          valuePropName: 'checked'
+        },
         { type: 'profileItem', name: '__profile__', label: '', profileFilter: d => !isEmpty(d.rdp) },
         commonFields.username,
         commonFields.password,

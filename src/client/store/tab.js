@@ -20,6 +20,7 @@ import { action } from 'manate'
 import { shouldCaptureTerminalReloadState } from '../components/terminal/ssh-reload-state.js'
 import dangerousSessionFields from '../common/dangerous-session-fields'
 import { distributeTabsEvenly } from '../common/distribute-tabs'
+import { isNativeRdpTab } from '../components/rdp/native-rdp.js'
 
 function captureSshSessionState (tab, config) {
   return shouldCaptureTerminalReloadState(tab, config)
@@ -115,7 +116,7 @@ export default Store => {
       ...oldTab,
       tabCount: store.nextTabCount(),
       id: generate(), // Need to create new ID
-      status: statusMap.processing // Reset status
+      status: isNativeRdpTab(oldTab) ? statusMap.default : statusMap.processing
     }
     delete newTab._reloadState
     // Keepalive is per-session runtime state (the toolbar heartbeat icon /
@@ -181,7 +182,7 @@ export default Store => {
       ...deepCopy(sourceTab),
       id: generate(),
       tabCount: store.nextTabCount(),
-      status: statusMap.processing,
+      status: isNativeRdpTab(sourceTab) ? statusMap.default : statusMap.processing,
       isTransporting: undefined
     }
     delete duplicatedTab._reloadState

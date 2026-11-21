@@ -80,6 +80,7 @@ const {
   unmaximize
 } = require('./window-control')
 const { openFileWithEditor } = require('./open-file-with-editor')
+const { launchNativeRdp } = require('./native-rdp-win')
 const { loadFontList } = require('./font-list')
 // `../upgrade` pulls in the whole default-data set (db-defaults,
 // default-local-bookmarks, init-db, version-upgrade). Not needed to open the
@@ -376,6 +377,8 @@ function initIpc () {
     watchFile,
     unwatchFile,
     openFileWithEditor,
+    // open an RDP bookmark with the local Windows client, see ./native-rdp-win.js
+    launchNativeRdp,
     listWidgets,
     // the panel mirrors this instead of remembering each run result, so a
     // reloaded renderer still knows what is running
