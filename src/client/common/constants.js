@@ -312,8 +312,8 @@ export const rendererTypes = {
   dom: 'dom',
   webGL: 'webGL'
 }
-export const downloadUpgradeTimeout = 20000
 export const expandedKeysLsKey = 'expanded-keys'
+export const startupWorkspaceLsKey = 'startup-workspace'
 export const resolutionsLsKey = 'custom-resolution-key'
 export const checkedKeysLsKey = 'checked-keys'
 export const quickCommandLabelsLsKey = 'quick-command-label'

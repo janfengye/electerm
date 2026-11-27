@@ -1,23 +1,23 @@
 /**
- * highlight keyword in text
- * single keyword only
+ * highlight keywords in text
+ * accepts a single keyword string or an array of keywords
  */
 
 import './highlight.styl'
+import { getHighlightRanges } from '../../common/search-keywords.js'
 
 export default (text, keyword) => {
-  if (!keyword || !text.includes(keyword)) {
-    return text
+  if (!keyword || !text) return text
+  const title = String(text)
+  const ranges = getHighlightRanges(title, Array.isArray(keyword) ? keyword : [keyword])
+  if (!ranges.length) return text
+  const parts = []
+  let offset = 0
+  for (const { start, end } of ranges) {
+    parts.push(title.slice(offset, start))
+    parts.push(<span className='highlight' key={start}>{title.slice(start, end)}</span>)
+    offset = end
   }
-  const arr = text.split(keyword)
-  const len = arr.length
-  return arr.reduce((prev, t, i) => {
-    return [
-      ...prev,
-      t,
-      i === len - 1
-        ? null
-        : <span className='highlight'>{keyword}</span>
-    ]
-  }, [])
+  parts.push(title.slice(offset))
+  return parts
 }
